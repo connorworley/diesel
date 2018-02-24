@@ -5,3 +5,5 @@ pub mod option;
 mod primitives;
 mod tuples;
 mod decimal;
+#[cfg(feature = "arrayvec")]
+mod arraystring;
