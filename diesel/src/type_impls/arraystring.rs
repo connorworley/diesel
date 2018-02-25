@@ -35,3 +35,41 @@ where
         arrayvec::ArrayString::<A>::from(string).map_err(|e| e.into())
     }
 }
+
+#[test]
+#[cfg(feature = "mysql")]
+fn arraystring_to_sql() {
+    use mysql::Mysql;
+    let mut bytes = Output::test();
+    let test_arraystring = arrayvec::ArrayString::<[u8; 32]>::from("abcdefghijklmnopqrstuvwxyz012345").unwrap();
+    ToSql::<Text, Mysql>::to_sql(&test_arraystring, &mut bytes).unwrap();
+    assert_eq!(bytes, test_arraystring.as_bytes());
+}
+
+#[test]
+#[cfg(feature = "mysql")]
+fn some_arraystring_from_sql() {
+    use mysql::Mysql;
+    let input_arraystring = arrayvec::ArrayString::<[u8; 32]>::from("abcdefghijklmnopqrstuvwxyz012345").unwrap();
+    let output_arraystring: arrayvec::ArrayString<[u8; 32]> = FromSql::<Text, Mysql>::from_sql(Some(input_arraystring.as_bytes())).unwrap();
+    assert_eq!(input_arraystring, output_arraystring);
+}
+
+#[test]
+#[cfg(feature = "mysql")]
+fn bad_arraystring_from_sql() {
+    use mysql::Mysql;
+    let arraystring = <arrayvec::ArrayString<[u8; 8]> as FromSql<Text, Mysql>>::from_sql(Some(b"imoutooooo"));
+    assert_eq!(arraystring.unwrap_err().description(), "insufficient capacity");
+}
+
+#[test]
+#[cfg(feature = "mysql")]
+fn no_arraystring_from_sql() {
+    use mysql::Mysql;
+    let arraystring = <arrayvec::ArrayString<[u8; 8]> as FromSql<Text, Mysql>>::from_sql(None);
+    assert_eq!(
+        arraystring.unwrap_err().description(),
+        "Unexpected null for non-null column"
+    );
+}
